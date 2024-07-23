@@ -73,8 +73,18 @@ def test_model_caching():
 
     assert elapsed2 < elapsed, f"Second time elapsed: {elapsed2}, first time elapsed: {elapsed}"
 
+    print(embeddings1.shape)
+    print(embeddings2.shape)
+
     assert torch.allclose(embeddings1, embeddings2)
 
+
+    new_cache = Cache('test_cache_')
+
+    embeddings3, got_all = new_cache.get(sentences)
+    print(embeddings3.shape)
+    assert got_all
+    assert torch.allclose(embeddings1, embeddings3)
 
     model.cache.clear()
 

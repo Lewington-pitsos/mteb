@@ -8,10 +8,22 @@ from sae_lens import HookedSAETransformer, SAE
 from tqdm import tqdm
 import os
 from mteb.model_meta import ModelMeta
+import json
 
 
 class SAEncoder():
-    def __init__(self, transformer_name, sae_model, sae_id, max_sequence_length, device, batch_size=32, use_cache=False, cache_base=None) -> None:
+    def __init__(
+            self, 
+            transformer_name, 
+            sae_model, 
+            sae_id, 
+            max_sequence_length, 
+            device, 
+            batch_size=32, 
+            use_cache=False, 
+            cache_base=None,
+            reuse_cache=False
+        ) -> None:
         self.transformer = HookedSAETransformer.from_pretrained(transformer_name, device=device)
         self.tokenizer = AutoTokenizer.from_pretrained(transformer_name)
         self.tokenizer.pad_token = self.tokenizer.eos_token
@@ -32,11 +44,12 @@ class SAEncoder():
         self.use_cache = use_cache
         if self.use_cache:
             self.cache = Cache(base_file=cache_base)
-            self.cache.clear()
+            if not reuse_cache:
+                self.cache.clear()
 
         self.mteb_model_meta = ModelMeta(
             name = 'SAENcoder',
-            revision = 'maskfeatures',
+            revision = 'hidden_states',
             languages=None,
             release_date=None
         )
@@ -52,7 +65,7 @@ class SAEncoder():
 
         all_fts = []
         with torch.no_grad():
-            for batch in tqdm(batches, desc='Encoding sentences'):
+            for batch in tqdm(batches, desc='Encoding'):
                 features = None
                 if self.use_cache:
                     activations, got_all = self.cache.get(batch)
@@ -75,13 +88,14 @@ class SAEncoder():
 
                     hidden_states = all_hidden_states[self.sae.cfg.hook_name]
 
-                    features = self.sae.encode(hidden_states) * attention_mask.unsqueeze(-1)
+                    # features = self.sae.encode(hidden_states) * attention_mask.unsqueeze(-1)
+                    features = hidden_states * attention_mask.unsqueeze(-1)
 
                     seq_lens = torch.sum(attention_mask, dim=1)
                     features = torch.sum(features, dim=1) / seq_lens.unsqueeze(-1)
                     if self.use_cache:
                         self.cache.add(batch, features)
-
+                
                 self.means.append(torch.mean(features).item())
                 self.stds.append(torch.std(features).item())
                 all_fts.append(features)
@@ -97,10 +111,19 @@ class Cache():
     def __init__(self, base_file=None) -> None:
         self.cache_file = 'cache.db' if base_file is None else base_file + 'cache.db'
         self.memmap_file = 'activations.dat' if base_file is None else base_file + 'activations.dat'
+        self.metadata_file = 'metadata.json' if base_file is None else base_file + 'metadata.json'
         self.memmap_dtype = np.float32
         self.memmap = None
         self.memmap_id = 0
         self.activations_shape = None  # Will be set when the first activations are added
+
+        if os.path.exists(self.metadata_file):
+            with open(self.metadata_file, 'r') as f:
+                metadata = json.load(f)
+                self.activations_shape = tuple(metadata['shape'])
+                memmap_shape = (metadata['size'],) + self.activations_shape
+                self.memmap = np.memmap(self.memmap_file, dtype=self.memmap_dtype, mode='r', shape=memmap_shape)
+                self.memmap_id = metadata['id']
 
     def _initialize_memmap(self, activations_shape):
         if self.memmap is None:
@@ -108,6 +131,7 @@ class Cache():
             self.memmap_shape = (initial_size,) + activations_shape
             self.memmap = np.memmap(self.memmap_file, dtype=self.memmap_dtype, mode='w+', shape=self.memmap_shape)
             self.activations_shape = activations_shape
+            self._save_metadata()
 
     def _resize_memmap(self, new_size):
         temp_filename = self.memmap_file + '.tmp'
@@ -117,6 +141,16 @@ class Cache():
         os.remove(self.memmap_file)
         os.rename(temp_filename, self.memmap_file)
         self.memmap = temp_memmap
+        self._save_metadata()
+
+    def _save_metadata(self):
+        metadata = {
+            'shape': self.activations_shape,
+            'size': self.memmap.shape[0],
+            'id': self.memmap_id
+        }
+        with open(self.metadata_file, 'w') as f:
+            json.dump(metadata, f)
 
     def add(self, sentences, activations):
         if self.activations_shape is None:
@@ -130,12 +164,20 @@ class Cache():
 
         self.memmap[self.memmap_id:self.memmap_id + num_activations] = activations
         self.memmap.flush()
+        self._save_metadata()
 
         with shelve.open(self.cache_file) as db:
             for i, text in enumerate(sentences):
                 db[text] = self.memmap_id + i
 
         self.memmap_id += num_activations
+        self._save_metadata()
+
+    def all_data(self):
+        with shelve.open(self.cache_file) as db:
+            for key in db.keys():
+                activations = self.memmap[db[key]]
+                yield key, activations
 
     def get(self, sentences):
         with shelve.open(self.cache_file) as db:
@@ -154,6 +196,8 @@ class Cache():
             os.remove(self.cache_file)
         if os.path.exists(self.memmap_file):
             os.remove(self.memmap_file)
+        if os.path.exists(self.metadata_file):
+            os.remove(self.metadata_file)
         self.memmap = None
         self.memmap_id = 0
         self.activations_shape = None
