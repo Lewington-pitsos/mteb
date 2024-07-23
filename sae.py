@@ -147,7 +147,7 @@ class Cache():
                 else:
                     return [], False
 
-        return torch.tensor(activations), got_all
+        return torch.tensor(np.array(activations)), got_all
 
     def clear(self):
         if os.path.exists(self.cache_file):

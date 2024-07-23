@@ -9,6 +9,13 @@ def saencoder():
     model = SAEncoder('gpt2', 'gpt2-small-res-jb', "blocks.10.hook_resid_pre", 1024, 'cpu')
     return model
 
+@pytest.fixture()
+def testing_cache():
+    cache = Cache('test_cache.db')
+    yield cache
+
+    cache.clear()
+
 def test_saencoder(saencoder):
     sentences = ["Hello, my dog is cute", "Hello, my cat is cute"]
 
@@ -52,13 +59,13 @@ def test_model_caching():
     sentences = [f"Hello, my dog is cute, this is a long sentence a really really long sentence indeed ypu got no idea buddy how god damn long of a sentence this is my gum ohhhhh baby this sentence you got no clue {i}" for i in range(n)]
 
     start = time.time()
-    embeddings = model.encode(sentences)
+    embeddings1 = model.encode(sentences)
     end = time.time()
 
     elapsed = end - start
 
     start = time.time()
-    embeddings = model.encode(sentences)
+    embeddings2 = model.encode(sentences)
     end = time.time()
 
     elapsed2 = end - start
@@ -66,25 +73,24 @@ def test_model_caching():
 
     assert elapsed2 < elapsed, f"Second time elapsed: {elapsed2}, first time elapsed: {elapsed}"
 
+    assert torch.allclose(embeddings1, embeddings2)
+
 
     model.cache.clear()
 
-def test_cache():
-    cache_name = 'test_cache.db'
-    cache = Cache(cache_name)
-
+def test_cache(testing_cache):
     sentences = ["Hello, my dog is cute", "Hello, my cat is cute"]
-    activations, got_all = cache.get(sentences)
+    activations, got_all = testing_cache.get(sentences)
     assert not got_all, got_all
 
-    cache.add([sentences[0]], torch.tensor([[1, 2, 3]]))
+    testing_cache.add([sentences[0]], torch.tensor([[1, 2, 3]]))
 
-    activations, got_all = cache.get(sentences)
+    activations, got_all = testing_cache.get(sentences)
     assert not got_all, got_all
 
 
-    cache.add([sentences[1]], torch.tensor([[4, 5, 6]]))
-    activations, got_all = cache.get(sentences)
+    testing_cache.add([sentences[1]], torch.tensor([[4, 5, 6]]))
+    activations, got_all = testing_cache.get(sentences)
     assert got_all, got_all
 
     assert isinstance(activations, torch.Tensor)
@@ -92,24 +98,17 @@ def test_cache():
     assert torch.allclose(activations[0], torch.tensor([1.0, 2.0, 3.0]))
     assert torch.allclose(activations[1], torch.tensor([4.0, 5.0, 6.0]))
 
-    cache.clear()
-
-def test_fast_writing():
-    cache_name = 'test_cache.db'
-    cache = Cache(cache_name)
+def test_fast_writing(testing_cache):
     n=1000
     sentences = [f"Hello, my dog is cute {i} llll" for i in range(n)]
 
     tensors = (torch.rand(n, 25000) > 1.5) * 1
 
     start = time.time()
-    cache.add(sentences, tensors)
-    activations, got_all = cache.get(sentences)
+    testing_cache.add(sentences, tensors)
+    activations, got_all = testing_cache.get(sentences)
     end = time.time()
 
     elapsed = end - start
     print(elapsed)
     assert elapsed < 0.5, f"Time elapsed: {elapsed}"
-
-
-    cache.clear()
