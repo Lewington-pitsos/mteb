@@ -1,2 +1,0 @@
-- check why the sentences come in different each time
-- check that means are not effected by padding

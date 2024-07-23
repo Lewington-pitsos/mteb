@@ -3,7 +3,7 @@ from sae import SAEncoder
 import mteb
 import json
 
-model = SAEncoder('gpt2', 'gpt2-small-res-jb', "blocks.10.hook_resid_pre", 1024, 'cpu', batch_size=32)
+model = SAEncoder('gpt2', 'gpt2-small-res-jb', "blocks.10.hook_resid_pre", 1024, 'cpu', batch_size=32, use_cache=True)
 
 tasks = mteb.get_tasks(tasks=["Banking77Classification"])
 evaluation = mteb.MTEB(tasks=tasks)

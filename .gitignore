@@ -141,3 +141,7 @@ tmp.py
 # sandbox
 sb.ipynb
 tests/create_meta/model_card.md
+
+
+*.dat
+*.db
