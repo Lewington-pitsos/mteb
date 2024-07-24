@@ -22,7 +22,8 @@ class SAEncoder():
             batch_size=32, 
             use_cache=False, 
             cache_base=None,
-            reuse_cache=False
+            reuse_cache=False,
+            revision='default'
         ) -> None:
         self.transformer = HookedSAETransformer.from_pretrained(transformer_name, device=device)
         self.tokenizer = AutoTokenizer.from_pretrained(transformer_name)
@@ -49,12 +50,33 @@ class SAEncoder():
 
         self.mteb_model_meta = ModelMeta(
             name = 'SAENcoder',
-            revision = 'hidden_states',
+            revision = f'{transformer_name}.{sae_id}.{revision}',
             languages=None,
-            release_date=None
+            release_date=None,
         )
 
-                
+    def _get_features(self, batch):
+        output = self.tokenizer(batch, padding='max_length', truncation=True, max_length=self.max_sequence_length,  return_tensors='pt')
+
+        input_ids = output['input_ids'].to(self.device)
+        attention_mask = output['attention_mask'].to(self.device)
+
+        _, all_hidden_states = self.transformer.run_with_cache(
+            input_ids, 
+            attention_mask=attention_mask, 
+            prepend_bos=True, 
+            stop_at_layer=self.sae.cfg.hook_layer + 1
+        )
+
+        features = all_hidden_states[self.sae.cfg.hook_name] * attention_mask.unsqueeze(-1)
+
+        seq_lens = torch.sum(attention_mask, dim=1)
+        features = torch.sum(features, dim=1) / seq_lens.unsqueeze(-1)
+        if self.use_cache:
+            self.cache.add(batch, features.cpu())
+
+        return features
+
     def encode(
         self, sentences: list[str], **kwargs: Any
     ) -> torch.Tensor | np.ndarray:    
@@ -63,8 +85,8 @@ class SAEncoder():
         else:
             batches = [sentences]
 
-        all_fts = []
         with torch.no_grad():
+            all_fts = []
             for batch in tqdm(batches, desc='Encoding'):
                 features = None
                 if self.use_cache:
@@ -74,37 +96,17 @@ class SAEncoder():
                         features = activations
 
                 if features is None:
-                    output = self.tokenizer(batch, padding='longest', truncation=True, max_length=self.max_sequence_length,  return_tensors='pt')
-
-                    input_ids = output['input_ids']
-                    attention_mask = output['attention_mask']
-
-                    _, all_hidden_states = self.transformer.run_with_cache(
-                        input_ids, 
-                        attention_mask=attention_mask, 
-                        prepend_bos=True, 
-                        stop_at_layer=self.sae.cfg.hook_layer + 1
-                    )
-
-                    hidden_states = all_hidden_states[self.sae.cfg.hook_name]
-
-                    # features = self.sae.encode(hidden_states) * attention_mask.unsqueeze(-1)
-                    features = hidden_states * attention_mask.unsqueeze(-1)
-
-                    seq_lens = torch.sum(attention_mask, dim=1)
-                    features = torch.sum(features, dim=1) / seq_lens.unsqueeze(-1)
-                    if self.use_cache:
-                        self.cache.add(batch, features)
+                    features = self._get_features(batch)
                 
                 self.means.append(torch.mean(features).item())
                 self.stds.append(torch.std(features).item())
-                all_fts.append(features)
+                all_fts.append(features.cpu())
 
-        final_output = torch.tensor(torch.cat(all_fts, dim=0))
+            final_output = torch.cat(all_fts, dim=0)
 
-        assert final_output.shape[0] == len(sentences)
+            assert final_output.shape[0] == len(sentences)
 
-        return final_output
+            return final_output
     
 
 class Cache():

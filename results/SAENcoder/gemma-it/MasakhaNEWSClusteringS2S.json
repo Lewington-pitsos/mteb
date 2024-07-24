@@ -1,0 +1,27 @@
+{
+  "dataset_revision": "8ccc72e69e65f40c70e117d8b3c08306bb788b60",
+  "evaluation_time": 19.716901302337646,
+  "kg_co2_emissions": null,
+  "mteb_version": "1.12.85",
+  "scores": {
+    "test": [
+      {
+        "hf_subset": "eng",
+        "languages": [
+          "eng-Latn"
+        ],
+        "main_score": 0.027768529882819894,
+        "v_measure": 0.027768529882819894,
+        "v_measure_std": 0.030723181651764374,
+        "v_measures": [
+          0.01888575449144476,
+          0.003843503673514086,
+          0.007210245093897654,
+          0.021122560081935273,
+          0.08778058607330769
+        ]
+      }
+    ]
+  },
+  "task_name": "MasakhaNEWSClusteringS2S"
+}
