@@ -1,3 +1,4 @@
+import time
 import os
 from datasets import load_dataset
 from sae import SAEncoder
@@ -5,6 +6,8 @@ import mteb
 import json
 from sentence_transformers import SentenceTransformer
 import torch
+
+start = time.time()
 
 if torch.cuda.is_available():
     device = 'cuda'
@@ -17,31 +20,39 @@ with open('.credentials.json') as f:
 os.environ['HF_TOKEN'] = creds['HF_TOKEN']
 
 
-TASK_LIST = [
-    "AmazonCounterfactualClassification",
-    # "AmazonPolarityClassification",
-    "AmazonReviewsClassification",
-    "Banking77Classification",
-    "EmotionClassification",
-    "ImdbClassification",
-    "MassiveIntentClassification",
-    "MassiveScenarioClassification",
-    "MTOPDomainClassification",
-    "MTOPIntentClassification",
-    "ToxicConversationsClassification",
-    "TweetSentimentExtractionClassification",
 
-    # # "ArxivClusteringP2P",
-    # # "ArxivClusteringS2S",
-    # "BiorxivClusteringP2P",
-    # "BiorxivClusteringS2S",
-    # "MedrxivClusteringP2P",
-    # "MedrxivClusteringS2S",
-    # # "RedditClustering",
-    # # "RedditClusteringP2P",
-    # # "StackExchangeClustering",
-    # "StackExchangeClusteringP2P",
-    # "TwentyNewsgroupsClustering",
+    # "Banking77Classification",
+    # "EmotionClassification",
+    # "ImdbClassification",
+    # "MassiveIntentClassification",
+    # "MassiveScenarioClassification",
+    # "MTOPIntentClassification",
+
+TASK_LIST = [
+    # # "AmazonCounterfactualClassification",
+    # # "AmazonPolarityClassification",
+    # # "AmazonReviewsClassification",
+    # "Banking77Classification",
+    # "EmotionClassification",
+    # "ImdbClassification",
+    # "MassiveIntentClassification",
+    # "MassiveScenarioClassification",
+    # # "MTOPDomainClassification",
+    # "MTOPIntentClassification",
+    # # "ToxicConversationsClassification",
+    # # "TweetSentimentExtractionClassification",
+
+    # "ArxivClusteringP2P",
+    # "ArxivClusteringS2S",
+    "BiorxivClusteringP2P",
+    "BiorxivClusteringS2S",
+    "MedrxivClusteringP2P",
+    "MedrxivClusteringS2S",
+    # "RedditClustering",
+    # "RedditClusteringP2P",
+    # "StackExchangeClustering",
+    "StackExchangeClusteringP2P",
+    "TwentyNewsgroupsClustering",
 
 
 ]
@@ -74,3 +85,8 @@ model = SAEncoder(
 )
 
 evaluation.run(model)
+
+
+end = time.time()
+
+print('time elapsed', end - start)
