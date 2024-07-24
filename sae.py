@@ -26,8 +26,6 @@ class SAEncoder():
             revision='default'
         ) -> None:
         self.transformer = HookedSAETransformer.from_pretrained(transformer_name, device=device)
-        self.tokenizer = AutoTokenizer.from_pretrained(transformer_name)
-        self.tokenizer.pad_token = self.tokenizer.eos_token
         self.max_sequence_length = max_sequence_length
 
         self.sae, _, _ = SAE.from_pretrained(
@@ -56,7 +54,7 @@ class SAEncoder():
         )
 
     def _get_features(self, batch):
-        output = self.tokenizer(batch, padding='max_length', truncation=True, max_length=self.max_sequence_length,  return_tensors='pt')
+        output = self.transformer.tokenizer(batch, padding='max_length', truncation=True, max_length=self.max_sequence_length,  return_tensors='pt')
 
         input_ids = output['input_ids'].to(self.device)
         attention_mask = output['attention_mask'].to(self.device)

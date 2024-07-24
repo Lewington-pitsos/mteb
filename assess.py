@@ -50,16 +50,16 @@ evaluation = mteb.MTEB(tasks=tasks)
 
 # model = SAEncoder('gpt2', 'gpt2-small-res-jb', "blocks.10.hook_resid_pre", 1024, 'cpu', batch_size=32, use_cache=True)
 
-MODEL_ID = 'gpt2'
-MODEL_NAME = 'gpt2-small-res-jb'
-SAE_ID = 'blocks.10.hook_resid_pre'
-BATCH_SIZE=32
+# MODEL_ID = 'gpt2'
+# MODEL_NAME = 'gpt2-small-res-jb'
+# SAE_ID = 'blocks.10.hook_resid_pre'
+# BATCH_SIZE=32
 
 
-# MODEL_ID = 'google/gemma-2b-it'
-# MODEL_NAME = 'gemma-2b-it-res-jb'
-# SAE_ID = "blocks.12.hook_resid_post"
-# BATCH_SIZE=8
+MODEL_ID = 'google/gemma-2b-it'
+MODEL_NAME = 'gemma-2b-it-res-jb'
+SAE_ID = "blocks.12.hook_resid_post"
+BATCH_SIZE=8
 
 
 model = SAEncoder(
