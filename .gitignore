@@ -148,4 +148,3 @@ tests/create_meta/model_card.md
 *metadata.json
 .credentials.json
 # removed results from mteb repo they are now available at: https://github.com/embeddings-benchmark/results
-results/

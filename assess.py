@@ -31,17 +31,17 @@ TASK_LIST = [
     "ToxicConversationsClassification",
     "TweetSentimentExtractionClassification",
 
-    # "ArxivClusteringP2P",
-    # "ArxivClusteringS2S",
-    "BiorxivClusteringP2P",
-    "BiorxivClusteringS2S",
-    "MedrxivClusteringP2P",
-    "MedrxivClusteringS2S",
-    # "RedditClustering",
-    # "RedditClusteringP2P",
-    # "StackExchangeClustering",
-    "StackExchangeClusteringP2P",
-    "TwentyNewsgroupsClustering",
+    # # "ArxivClusteringP2P",
+    # # "ArxivClusteringS2S",
+    # "BiorxivClusteringP2P",
+    # "BiorxivClusteringS2S",
+    # "MedrxivClusteringP2P",
+    # "MedrxivClusteringS2S",
+    # # "RedditClustering",
+    # # "RedditClusteringP2P",
+    # # "StackExchangeClustering",
+    # "StackExchangeClusteringP2P",
+    # "TwentyNewsgroupsClustering",
 
 
 ]
@@ -54,7 +54,7 @@ evaluation = mteb.MTEB(tasks=tasks)
 # MODEL_NAME = 'gpt2-small-res-jb'
 # SAE_ID = 'blocks.10.hook_resid_pre'
 # BATCH_SIZE=32
-
+REVISION='no-error'
 
 MODEL_ID = 'google/gemma-2b-it'
 MODEL_NAME = 'gemma-2b-it-res-jb'
@@ -70,6 +70,7 @@ model = SAEncoder(
     batch_size=BATCH_SIZE, 
     use_cache=False,
     device=device,
+    revision=REVISION
 )
 
 evaluation.run(model)

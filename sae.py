@@ -66,8 +66,8 @@ class SAEncoder():
             stop_at_layer=self.sae.cfg.hook_layer + 1
         )
 
-        features = all_hidden_states[self.sae.cfg.hook_name] * attention_mask.unsqueeze(-1)
-
+        features = self.sae.encode(all_hidden_states[self.sae.cfg.hook_name]) * attention_mask.unsqueeze(-1)
+        
         seq_lens = torch.sum(attention_mask, dim=1)
         features = torch.sum(features, dim=1) / seq_lens.unsqueeze(-1)
         if self.use_cache:
