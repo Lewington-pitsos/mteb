@@ -3,7 +3,6 @@ import shelve
 import torch
 import numpy as np
 from typing import Any
-from transformers import AutoTokenizer
 from sae_lens import HookedSAETransformer, SAE
 from tqdm import tqdm
 import os
